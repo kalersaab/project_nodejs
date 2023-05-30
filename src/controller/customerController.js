@@ -3,7 +3,7 @@ const { ObjectId } = require("mongoose").Types;
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const createCustomer = async function (req, res) {
+const createCustomer = async (req, res) => {
   try {
     const data = req.body;
     const {
@@ -43,7 +43,7 @@ const createCustomer = async function (req, res) {
   }
 };
 
-const loginCustomer = async function (req, res) {
+const loginCustomer = async (req, res) => {
   try {
     const data = req.body;
 
@@ -85,29 +85,47 @@ const loginCustomer = async function (req, res) {
   }
 };
 
-const allCustomer = async function (req, res) {
+const allCustomer = async (req, res) => {
   try {
     
-   const {title,
-      fistName,
-      lastName,
-      email,
-      phoneNumber,
-      gender,
-      skills} = req.query
-    const customerData = await customerModel.find(req.query)
-    const totalCount = await customerModel.countDocuments();
-    res.status(200).send({
-      message: "all customers fetch successfully",
-      count: totalCount,
-      data: customerData,
-    });
+    const {query} = req.query
+    const Keyword = req.query
+    const totalCount = await customerModel.countDocuments()
+  const fetchsize = req.query.fetchsize &&  parseInt(req.query.fetchsize) || 5
+  const startindex = req.query.startindex && parseInt(req.query.startindex) || 0
+
+  const searchCeriteria = {}
+  
+  // if(req.query.gender){
+  //   searchCeriteria.gender = req.query.gender;
+  // }
+
+
+  if(req.query.Keyword){
+
+    
+  }
+  const customerData = await customerModel.aggregate([
+    {
+      $sort: {
+        createAt: 1
+      }
+    },
+    {$match: searchCeriteria},
+    {$skip : startindex},
+    {$limit: fetchsize}
+  ])
+  res.status(200).send({
+    message: "All customers fetched successfully",
+    count: totalCount,
+    data: customerData,
+  });
   } catch (error) {
     console.log(error);
   }
 };
 
-const singleCustomer = async function (req, res) {
+const singleCustomer = async (req, res) => {
   try {
     const { customerId } = req.params;
     const customerData = await customerModel.findOne({ _id: new ObjectId(customerId) });
@@ -119,7 +137,7 @@ const singleCustomer = async function (req, res) {
   }
 };
 
-const updateCustomer = async function (req, res) {
+const updateCustomer = async (req, res) => {
   try {
     const { customerId } = req.params;
     const data = req.body;
@@ -154,11 +172,11 @@ const updateCustomer = async function (req, res) {
   }
 };
 
-const deleteCustomer = async function (req, res) {
+const deleteCustomer = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { customerId } = req.params;
     const customerData = await customerModel.findOneAndDelete({
-      _id: new ObjectId(id),
+      _id: new ObjectId(customerId),
     });
     res.send({ message: "customer deleted successfully" });
   } catch (error) {

@@ -1,7 +1,7 @@
 const customerModel = require("../model/customerModel");
 const { ObjectId } = require("mongoose").Types;
 
-const authorization = async function (req, res, next) {
+const authorization = async (req, res, next) => {
     try {
       idFromToken = tokenCheck.customerId;
   
