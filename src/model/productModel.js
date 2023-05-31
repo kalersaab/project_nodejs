@@ -15,7 +15,7 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    customerId: {
+    id: {
       type: ObjectId,
       ref: "customer",
       required: true,

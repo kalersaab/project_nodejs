@@ -1,194 +1,135 @@
 const customerModel = require("../model/customerModel");
-const { ObjectId } = require("mongoose").Types;
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const {ObjectId} = require("mongoose").Types;
+const bcrypt = require("bcrypt")
+const jwt = require("jsonwebtoken")
 
-const createCustomer = async (req, res) => {
-  try {
-    const data = req.body;
-    const {
-      title,
-      fistName,
-      lastName,
-      email,
-      password,
-      phoneNumber,
-      gender,
-      skills,
-    } = data;
+const CreateCustomer = async (req, res) => {
+  try{
+    const{title, firstName, lastName, address, email, password, phoneNumber, gender, skills} =req.body;
+    const salt = await bcrypt.genSalt(10)
+    const hashPassword = await bcrypt.hash(password, salt) 
+    
+    const CustomerData = await customerModel.create({
+      title, firstName, lastName, gender, address, email, password:hashPassword, phoneNumber, skills});
+    const {password:omit, ...responseData} = CustomerData._doc;
 
-    // random 10 digits create
-    const salt = await bcrypt.genSalt(10);
-
-    const hashPassword = await bcrypt.hash(password, salt);
-
-    const customerData = await customerModel.create({
-      title,
-      fistName,
-      lastName,
-      email,
-      password: hashPassword,
-      phoneNumber,
-      gender,
-      skills,
-    });
-    const { password: omit, ...responseData } = customerData._doc;
-
-    res.status(201).send({
-      message: "customer created successfully",
-      data: responseData,
-    });
-  } catch (error) {
-    console.log(error);
+    res.status(201).send({message: "Customer create succesfully", data: responseData})
+  }catch(err){
+    console.log(err)
   }
-};
+}
+const customerlogin = async (req, res) => {
+  try{
+    const { email, password} = req.body;
 
-const loginCustomer = async (req, res) => {
-  try {
-    const data = req.body;
-
-    const { email, password } = data;
-
-    if (!email) {
-      res.status(400).send({ message: "please provide email" });
+    if(!email){
+      res.status(400).send({message:"please, provide email"})
+    }
+    if(!password){
+      res.status(400).send({message:"Please, provide password"})
     }
 
-    if (!password) {
-      res.status(400).send({ message: "please provide a password" });
-    }
+    const Checkemail = await customerModel.findOne({ email:email})
+      if(!Checkemail){
+        res.status(404).send({message:"email is not exist "})
+      }
 
-    const checkEmail = await customerModel.findOne({ email: email });
-    if (!checkEmail) {
-      res
-        .status(404)
-        .send({ message: "email doesn't exist, please login again" });
-    }
+      const checkPasword = await bcrypt.compare(password, Checkemail.password)
+      if(!checkPasword){
+        res.status(200).send({message:"wrong password and try again"})
+      }
 
-    console.log("checkEmail", checkEmail._id);
-
-    const checkPassword = await bcrypt.compare(password, checkEmail.password);
-    if (!checkPassword) {
-      res.status(400).send({ message: "wrong password please try again" });
-    }
-
-    const token = jwt.sign(
-      {
-        customerId: checkEmail._id,
-      },
-      "Secrete_Key",
-      { expiresIn: "1h" }
-    );
-
-    res.send({ message: "login successful", data: token });
-  } catch (error) {
-    console.log(error);
+      const token = jwt.sign(
+        {
+          id: Checkemail._id
+        },
+        "secret_key",
+        {expiresIn: "1h"}
+      );
+      res.status(200).send({message:"login successfully", data: token})
+    } catch(err){
+    console.log(err)
   }
-};
+}
 
 const allCustomer = async (req, res) => {
-  try {
-    
-    const {query} = req.query
-    const Keyword = req.query
+  try{
+    const{query} = req;
+    const {keyword} = req.query;
     const totalCount = await customerModel.countDocuments()
-  const fetchsize = req.query.fetchsize &&  parseInt(req.query.fetchsize) || 5
-  const startindex = req.query.startindex && parseInt(req.query.startindex) || 0
+    const fetchsize = req.query.fetchsize && parseInt(req.query.fetchsize) || 10
+    const startindex = req.query.startindex && parseInt(req.query.startindex) || 0
 
-  const searchCeriteria = {}
-  
-  // if(req.query.gender){
-  //   searchCeriteria.gender = req.query.gender;
-  // }
+    const searchCeriteria = {};
+    if (req.query.gender){
+      searchCeriteria.gender = req.query.gender
+    }
+    if(req.query.keyword){
+      searchCeriteria["$or"] =[
+        {firstName: {$regex: `^${keyword.trim()}`, $options: "i"}},
+        {lastName: {$regex: `${keyword.trim()}`, $options: "i"}},
+        {email: {$regex: `${keyword.trim()}`, $options: "i"}}
+      ]
+    }
 
-
-  if(req.query.Keyword){
-
-    
-  }
-  const customerData = await customerModel.aggregate([
-    {
-      $sort: {
-        createAt: 1
-      }
-    },
-    {$match: searchCeriteria},
-    {$skip : startindex},
-    {$limit: fetchsize}
-  ])
-  res.status(200).send({
-    message: "All customers fetched successfully",
-    count: totalCount,
-    data: customerData,
-  });
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-const singleCustomer = async (req, res) => {
-  try {
-    const { customerId } = req.params;
-    const customerData = await customerModel.findOne({ _id: new ObjectId(customerId) });
-    res
-      .status(200)
-      .send({ message: "single customer details", data: customerData });
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-const updateCustomer = async (req, res) => {
-  try {
-    const { customerId } = req.params;
-    const data = req.body;
-    const {
-      title,
-      fistName,
-      lastName,
-      email,
-      password,
-      phoneNumber,
-      gender,
-      skills,
-    } = data;
-
-    const customerData = await customerModel.findOneAndUpdate(
-      { _id: new ObjectId(customerId) },
+    const getcustomer = await customerModel.aggregate([
+      {$match:searchCeriteria},
       {
-        title,
-        fistName,
-        lastName,
-        email,
-        password,
-        phoneNumber,
-        gender,
-        skills,
+        $sort:{
+          createAt:1
+        }
+
       },
-      { new: true }
-    );
-    res.send({ message: "customer updated successfully ", data: customerData });
-  } catch (error) {
-    console.log(error);
-  }
-};
+      {
+      $facet: {
+      data:[{$skip:startindex}, {$limit:fetchsize}],
+      count: [{$count:"total"}]
+      },
+    }
+    ])
+    res.status(200).send({message:"all customer fetched successfully ", count:totalCount[0]?.count[0]?.total, data:getcustomer[0]?.data })
+  } catch(err){
+    console.log(err)
+}
+}
 
-const deleteCustomer = async (req, res) => {
-  try {
-    const { customerId } = req.params;
-    const customerData = await customerModel.findOneAndDelete({
-      _id: new ObjectId(customerId),
-    });
-    res.send({ message: "customer deleted successfully" });
-  } catch (error) {
-    console.log(error);
+const singleCustomer = async (req,res) =>{
+  try{
+    const {id} = req.params;
+    const customerData = await customerModel.findById({_id: new ObjectId(id)})
+    res.status(200).send({message:"Customer fetched Successfully", data: customerData})
+  }catch(err){
+    console.log(err)
   }
-};
+}
 
-module.exports = {
-  createCustomer,
-  allCustomer,
-  singleCustomer,
-  updateCustomer,
-  deleteCustomer,
-  loginCustomer,
-};
+const customerUpdate = async (req,res) => {
+  try{
+    const {id} = req.params
+    const {title, firstName, lastName, address, email, password, phoneNumber, gender, skills} = req.body
+
+    const salt = await bcrypt.genSalt(10)
+    const hashPassword = await bcrypt.hash(password, salt)
+    
+    const CustomerData = await customerModel.findByIdAndUpdate({_id: new ObjectId(id)},
+      {title, firstName, lastName, address, email, password:hashPassword, phoneNumber, gender, skills
+      },
+      {new:true})
+      const {omit, ...responceData} = CustomerData._doc
+      res.status(200).send({message:"Customer is successfully updated", data: responceData})
+  }catch(err){
+    console.log(err)
+  }
+
+}
+
+const deleteCustomer = async (req, res) =>{
+  try{
+    const {id} = req.params;
+    const customerData = await customerModel.findOneAndDelete({_id: new ObjectId(id)})
+    res.status(200).send({message:"Customer deleted successfully  ", data: customerData})
+  }catch(err){
+    console.log(err)
+  }
+}
+module.exports = {CreateCustomer, customerlogin, allCustomer,customerUpdate, deleteCustomer, singleCustomer}

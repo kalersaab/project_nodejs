@@ -1,54 +1,55 @@
 const mongoose = require("mongoose");
 
-const customerSchema = new mongoose.Schema(
+const CustomerModel = new mongoose.Schema(
   {
-    title: {
-      type: String,
-      enum: ["Mr", "Mrs", "Miss"],
-    },
-
-    fistName: {
-      type: String,
+    title:{
+      type : String,
       required: true,
-      trim: true,
+      enum: ['Mr', 'Mrs', 'Miss']
     },
-
-    lastName: {
-      type: String,
-      required: true,
-      trim: true,
-    
-    },
-
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-    },
-    password: {
-      type: String,
-      required: true,
-    },
-    phoneNumber: {
-      type: Number,
-      required: true,
-      unique: true,
-    },
-
-    gender: {
-      type: String,
-      required: true,
-      enum: ["male", "female", "other"],
-    },
-
-    skills: [
-      {
-        type: String,
-      },
-    ],
+  
+  firstName:{
+    type:String,
+    required: true,
+    trim:true
   },
-  { timestamps: true }
-);
+  lastName: {
+    type: String,
+    required: true,
+    trim: true
 
-module.exports = mongoose.model("customer", customerSchema);
+  },
+  address: {
+    type: String,
+    required: true,
+  },
+  gender:{
+    type: String,
+    enum: ['male', 'female', 'other'],
+    required: true
+  },
+  email:{
+    type: String,
+    required: true,
+    unique: true,
+    trim : true,
+    lowercase: true
+  },
+  password:{
+    type: String,
+    requird:true
+  },
+  phoneNumber: {
+    type: Number,
+    unique :true,
+
+  },
+  skills:[{
+    type: String,
+  }],
+
+},
+{timeStamp: true}
+)
+module.exports = mongoose.model("Customer",CustomerModel)
+
