@@ -57,7 +57,7 @@ const allCustomer = async (req, res) => {
     const{query} = req;
     const {keyword} = req.query;
     const totalCount = await customerModel.countDocuments()
-    const fetchsize = req.query.fetchsize && parseInt(req.query.fetchsize) || 10
+    const fetchsize = req.query.fetchsize && parseInt(req.query.fetchsize) || 5
     const startindex = req.query.startindex && parseInt(req.query.startindex) || 0
 
     const searchCeriteria = {};
@@ -82,9 +82,14 @@ const allCustomer = async (req, res) => {
       },
       {
       $facet: {
-      data:[{$skip:startindex}, {$limit:fetchsize}],
+      data:[
+        {$skip:startindex}, 
+        {$limit:fetchsize},
+        
+      ],
       count: [{$count:"total"}]
       },
+      
     }
     ])
     res.status(200).send({message:"all customer fetched successfully ", count:totalCount[0]?.count[0]?.total, data:getcustomer[0]?.data })
